@@ -2,4 +2,4 @@
 --check-leaks
 --compilers coffee:coffee-script/register
 --require coffee-coverage/register-istanbul
---globals promise
+--globals Promise
