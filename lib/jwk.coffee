@@ -14,6 +14,7 @@ class JWK extends events.EventEmitter
         @changeJwkSetUrl options.jwkSetUrl
 
         @request = options.request || JWK.request.defaults options.requestDefaults
+        @doNotRefreshDuration = toMillis options.doNotRefreshDuration || "5m"
         @refreshDuration = toMillis options.refreshDuration || "1d"
         @expireDuration = toMillis options.expireDuration || "7d"
 
@@ -29,7 +30,7 @@ class JWK extends events.EventEmitter
     clear: () ->
         @emit "beforeClear"
 
-        @refreshAt = @expireAt = 0
+        @refreshAt = @expireAt = @doNotRefreshBefore = 0
         @lastModified = @etag = undefined
         @keystore = JWK.jose.JWK.createKeyStore()
         @rememberedKeys = []
@@ -43,12 +44,12 @@ class JWK extends events.EventEmitter
             if @expireAt < now then return @discoveryPromise
         return Promise.bind @, @keystore
 
-    refreshNowAsync: () ->
-        # Only valid if a URL is specified
-        return Promise.bind @ if !@jwkSetUrl
-
+    refreshNowAsync: (force) ->
         # Only 1 load at a time...
         if @refreshPromise then return @refreshPromise
+
+        # Only valid if a URL is specified
+        return Promise.bind @, @keystore if !@jwkSetUrl || (Date.now() < @doNotRefreshBefore && !force)
 
         promise = @refreshPromise = Promise.bind @
         .then () ->
@@ -63,6 +64,7 @@ class JWK extends events.EventEmitter
             @emit "beforeRefresh", reqOpts
             @request.getAsync reqOpts
         .spread (res, raw) ->
+            @doNotRefreshBefore = Date.now() + @doNotRefreshDuration
             return if res.statusCode == 304 # Not modified...
             now = Date.now()
             importJwkSetAsync raw,

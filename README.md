@@ -55,6 +55,7 @@ Options Available:
 - jwkSetUrl - URL to load the key set from
 - request - Optional promisified copy of the "request" library to use.  If not specified, our own internal one is used.
 - requestDefaults - Optional default options to inject into all HTTP requests.  See the "request" library's "defaults" method
+- doNotRefreshDuration - Minimum duration from when one JWK-set request completed before another may be submitted (to prevent too many requests if receiving bad tokens).  May be specified in milliseconds OR as a string compatible with the "ms" library.  Default is 5 minutes.
 - refreshDuration - Duration before a background refresh of jwkSetUrl is made.  May be specified in milliseconds OR as a string compatible with the "ms" library.  Default is 1 day.
 - expireDuration - Duration before a background refresh of jwkSetUrl is made.  May be specified in milliseconds OR as a string compatible with the "ms" library.  Defaylt is 7 days.
 
@@ -79,9 +80,10 @@ It will return a promise that is resolved to the node-jose keystore once the JWK
 - If the data is expired (or has never been loaded) then this will be after the URL is loaded and parsed
 - If the data is due for refresh, a refresh will be started but the promise will return immediately.
 
-### JWK.refreshNowAsync()
+### JWK.refreshNowAsync(force)
 
 Refreshes from the URL now, returning a promise that is resolved to the node-jose keystore upon completion of the reload.
+- If force is true then doNotRefreshDuration will be ignored.
 - If no URL is specified, it will resolve immediately.
 - If another refresh is pending, it will return the pending promise.
 
