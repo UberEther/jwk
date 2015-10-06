@@ -24,9 +24,8 @@
   "dependencies": {
     "bluebird": "^2.9.13",
     "coffee-script": "^1.9.2",
-    "ms": "^0.7.1",
     "node-jose": "^0.3.0",
-    "request": "^2.64.0"
+    "auto-refresh-from-url": "^0.1.0"
   },
 
   "devDependencies": {
