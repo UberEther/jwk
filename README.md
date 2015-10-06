@@ -1,6 +1,9 @@
 [![Build Status](https://travis-ci.org/UberEther/jwk.svg?branch=master)](https://travis-ci.org/UberEther/jwk)
 [![NPM Status](https://badge.fury.io/js/uberether-jwk.svg)](http://badge.fury.io/js/uberether-jwk)
 
+# TODO:
+( ) Integrate dynamic unit tests that use the [jose-cookbook](https://github.com/ietf-jose/cookbook) data - while many of these are really node-jose's responsibility, it would be good for us to verify and enforce in our tests.
+
 # Overview
 
 This library builds upon [node-jose](https://github.com/cisco/node-jose) and [auto-refresh-from-url](https://github.com/UberEther/auto-refresh-from-url) to allow for loading of JWK sets from a URL (with periodic or on-demand refresh) and performing JKA and JKS operations.

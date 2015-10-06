@@ -107,19 +107,18 @@ class JWK extends AutoRefresh
     verifySignatureAsync: (input, encoding) -> # https://github.com/cisco/node-jose#verifying-a-jws
         @refreshIfNeededAsync()
         .then (keystore) ->
-            JWK.jose.JWS.createVerify keystore
-            .verify input
+            Promise.bind @
+            .then () ->
+                JWK.jose.JWS.createVerify keystore
+                .verify input
             .catch (err) ->
-                throw err if err != "key does not match" || @doNotReloadOnMissingKey
+                throw err if err.message != "no key found" || @doNotReloadOnMissingKey
                 # Library rejects with "key does not match" if the key is not found...
                 @refreshNowAsync()
                 .then (newKeystore) ->
                     if newKeystore == keystore then throw err
                     JWK.jose.JWS.createVerify newKeystore
                     .verify input
-            .catch (err) ->
-                if err == "key does not match" then err = new Error "No matching signing key found"
-                throw err
 
     signAsync: (key, content, options = {}) -> # https://github.com/cisco/node-jose#signing-content
         options.encoding ||= "utf8"
@@ -149,16 +148,13 @@ class JWK extends AutoRefresh
                 JWK.jose.JWE.createDecrypt keystore
                 .decrypt input
             .catch (err) ->
-                throw err if err != undefined || @doNotReloadOnMissingKey
+                throw err if err.message != "no key found" || @doNotReloadOnMissingKey
                 # Library rejects with undefined if the key is not found...
                 @refreshNowAsync()
                 .then (newKeystore) ->
                     if newKeystore == keystore then throw err
                     JWK.jose.JWE.createDecrypt newKeystore
                     .decrypt input
-            .catch (err) ->
-                if err == undefined then err = new Error "No matching decryption key found"
-                throw err
 
 JWK.jose = _jose
 

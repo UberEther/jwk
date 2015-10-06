@@ -361,6 +361,67 @@ describe "JWK", () ->
             .then () -> done()
             .catch done
 
+        it "Should throw error if key is not found", (done) ->
+            payload = test: "XYZZY"
+
+            k1 = null
+            t = new JWK
+            t.manualLoadJwkAsync sampleKeySet
+            .then () -> t.getKeyAsync kid: "testKey1"
+            .then (key) ->
+                k1 = key
+                t.signAsync key, JSON.stringify payload
+            .then (rv) ->
+                t.removeKeyAsync k1
+                .then () -> t.verifySignatureAsync rv
+            .then (rv) -> throw new Error "Unexpected signature validation in failure unit test"
+            .catch (err) ->
+                throw err if !err instanceof Error || err.message != "no key found"
+                done()
+            .catch done
+
+        it "Should dynamically load key if key is not found", (done) ->
+            payload = test: "XYZZY"
+
+            k1 = null
+            t = new JWK
+            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            .then () -> t.getKeyAsync kid: "testKey1"
+            .then (key) ->
+                k1 = key
+                t.signAsync key, JSON.stringify payload
+            .then (rv) ->
+                t.removeKeyAsync k1
+                .then () ->
+                    t.doNotRefreshBefore = 0
+                    t.manualJwk = keys: [ k1 ]
+                    # This should now not find the key, refresh, and then find the key
+                    t.verifySignatureAsync rv
+            .then (rv) -> done()
+            .catch done
+
+        it "Should not dynamically load key if doNotReloadOnMissingKey is set", (done) ->
+            payload = test: "XYZZY"
+
+            k1 = null
+            t = new JWK doNotReloadOnMissingKey: true
+            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            .then () -> t.getKeyAsync kid: "testKey1"
+            .then (key) ->
+                k1 = key
+                t.signAsync key, JSON.stringify payload
+            .then (rv) ->
+                t.removeKeyAsync k1
+                .then () ->
+                    t.doNotRefreshBefore = 0
+                    t.manualJwk = keys: [ k1 ]
+                    # This should now not find the key, refresh, and then find the key
+                    t.verifySignatureAsync rv
+            .then (rv) -> throw new Error "Unexpected signature validation in failure unit test"
+            .catch (err) ->
+                throw err if !err instanceof Error || err.message != "no key found"
+                done()
+            .catch done
 
     describe "Encryption helpers", () ->
         it "Should round-trip", (done) ->
@@ -369,14 +430,12 @@ describe "JWK", () ->
             t = new JWK
             t.generateKeyAsync "RSA", 1024, kid: "testKey1"
             .then () -> t.getKeyAsync kid: "testKey1"
-            .then (key) -> 
+            .then (key) ->
                 t.encryptAsync key, JSON.stringify payload
                 .then (rv) ->
                     expect(rv).to.be.ok
                     t.decryptAsync rv
                 .then (rv) ->
-                    console.log rv
-
                     expect(rv).to.be.ok
                     expect(rv.key).to.equal(key)
                     expect(rv.header).to.deep.equal("alg": "RSA-OAEP", "enc": "A128CBC-HS256", kid: "testKey1")
@@ -386,3 +445,64 @@ describe "JWK", () ->
             .then () -> done()
             .catch done
 
+        it "Should throw error if key is not found", (done) ->
+            payload = test: "XYZZY"
+
+            k1 = null
+            t = new JWK
+            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            .then () -> t.getKeyAsync kid: "testKey1"
+            .then (key) ->
+                k1 = key
+                t.encryptAsync key, JSON.stringify payload
+            .then (rv) ->
+                t.removeKeyAsync k1
+                .then () -> t.decryptAsync rv
+            .then (rv) -> throw new Error "Unexpected decrption success in failure unit test"
+            .catch (err) ->
+                throw err if !err instanceof Error || err.message != "no key found"
+                done()
+            .catch done
+
+        it "Should dynamically load key if key is not found", (done) ->
+            payload = test: "XYZZY"
+
+            k1 = null
+            t = new JWK
+            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            .then () -> t.getKeyAsync kid: "testKey1"
+            .then (key) ->
+                k1 = key
+                t.encryptAsync key, JSON.stringify payload
+            .then (rv) ->
+                t.removeKeyAsync k1
+                .then () ->
+                    t.doNotRefreshBefore = 0
+                    t.manualJwk = keys: [ k1 ]
+                    # This should now not find the key, refresh, and then find the key
+                    t.decryptAsync rv
+            .then (rv) -> done()
+            .catch done
+
+        it "Should not dynamically load key if doNotReloadOnMissingKey is set", (done) ->
+            payload = test: "XYZZY"
+
+            k1 = null
+            t = new JWK doNotReloadOnMissingKey: true
+            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            .then () -> t.getKeyAsync kid: "testKey1"
+            .then (key) ->
+                k1 = key
+                t.encryptAsync key, JSON.stringify payload
+            .then (rv) ->
+                t.removeKeyAsync k1
+                .then () ->
+                    t.doNotRefreshBefore = 0
+                    t.manualJwk = keys: [ k1 ]
+                    # This should now not find the key, refresh, and then find the key
+                    t.decryptAsync rv
+            .then (rv) -> throw new Error "Unexpected decrption success in failure unit test"
+            .catch (err) ->
+                throw err if !err instanceof Error || err.message != "no key found"
+                done()
+            .catch done
