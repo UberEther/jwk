@@ -64,8 +64,14 @@ class JWK extends AutoRefresh
 
     getKeyAsync: () -> # Arguments follow node-jose.get() - https://github.com/cisco/node-jose#retrieving-keys
         searchArgs = arguments
+
         @refreshIfNeededAsync()
         .then (keystore) ->
+            # If you pass a key in, just return a promise for that key
+            # But do after the refresh - the caller might be relying on that...
+            if searchArgs.length == 1 && JWK.jose.JWK.isKey searchArgs[0]
+                return searchArgs[0]
+
             # Lookup and return the key
             rv = keystore.get.apply keystore, searchArgs
             return rv if rv || @doNotReloadOnMissingKey
@@ -123,8 +129,9 @@ class JWK extends AutoRefresh
     signAsync: (key, content, options = {}) -> # https://github.com/cisco/node-jose#signing-content
         options.encoding ||= "utf8"
         options.format ||= "compact"
-        Promise.bind @
-        .then () ->
+        @getKeyAsync key
+        .then (key) ->
+            if !key then throw new Error "No signing key found"
             JWK.jose.JWS.createSign options, key
             .update content, options.encoding
             .final()
@@ -134,8 +141,9 @@ class JWK extends AutoRefresh
     encryptAsync: (key, content, options = {}) -> # https://github.com/cisco/node-jose#encrypting-content
         options.encoding ||= "utf8"
         options.format ||= "compact"
-        Promise.bind @
-        .then () ->
+        @getKeyAsync key
+        .then (key) ->
+            if !key then throw new Error "No encryption key found"
             JWK.jose.JWE.createEncrypt options, key
             .update content, options.encoding
             .final()

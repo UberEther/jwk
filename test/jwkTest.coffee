@@ -361,6 +361,35 @@ describe "JWK", () ->
             .then () -> done()
             .catch done
 
+        it "Should round-trip (with key search)", (done) ->
+            payload = test: "XYZZY"
+
+            t = new JWK
+            t.manualLoadJwkAsync sampleKeySet
+            .then () -> t.signAsync { kid: "testKey1" }, JSON.stringify payload
+            .then (rv) ->
+                expect(rv).to.be.ok
+                t.verifySignatureAsync rv
+            .then (rv) ->
+                expect(rv).to.be.ok
+                expect(rv.header).to.deep.equal(alg: "ES256", kid: "testKey1")
+                t2 = JSON.parse rv.payload.toString "utf8"
+                expect(t2).to.deep.equal(payload)
+
+            .then () -> done()
+            .catch done
+
+        it "Should fail if no key is found", (done) ->
+            payload = test: "XYZZY"
+
+            t = new JWK
+            t.manualLoadJwkAsync sampleKeySet
+            .then () -> t.signAsync { kid: "testKey99999" }, JSON.stringify payload
+            .then () -> done new Error "Unexpected signing success in failure unit test"
+            .catch (err) ->
+                if err.message == "No signing key found" then done()
+                else done err
+
         it "Should throw error if key is not found", (done) ->
             payload = test: "XYZZY"
 
@@ -385,7 +414,7 @@ describe "JWK", () ->
 
             k1 = null
             t = new JWK
-            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            t.manualLoadJwkAsync sampleKeySet
             .then () -> t.getKeyAsync kid: "testKey1"
             .then (key) ->
                 k1 = key
@@ -405,7 +434,7 @@ describe "JWK", () ->
 
             k1 = null
             t = new JWK doNotReloadOnMissingKey: true
-            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            t.manualLoadJwkAsync sampleKeySet
             .then () -> t.getKeyAsync kid: "testKey1"
             .then (key) ->
                 k1 = key
@@ -428,7 +457,7 @@ describe "JWK", () ->
             payload = test: "XYZZY"
 
             t = new JWK
-            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            t.manualLoadJwkAsync sampleKeySet
             .then () -> t.getKeyAsync kid: "testKey1"
             .then (key) ->
                 t.encryptAsync key, JSON.stringify payload
@@ -437,20 +466,53 @@ describe "JWK", () ->
                     t.decryptAsync rv
                 .then (rv) ->
                     expect(rv).to.be.ok
-                    expect(rv.key).to.equal(key)
-                    expect(rv.header).to.deep.equal("alg": "RSA-OAEP", "enc": "A128CBC-HS256", kid: "testKey1")
+                    expect(rv.key.kid).to.equal("testKey1")
+                    expect(rv.header.alg).to.equal("ECDH-ES")
+                    expect(rv.header.enc).to.equal("A128CBC-HS256")
                     t2 = JSON.parse rv.plaintext.toString "utf8"
                     expect(t2).to.deep.equal(payload)
 
             .then () -> done()
             .catch done
 
+        it "Should round-trip (with key search)", (done) ->
+            payload = test: "XYZZY"
+
+            t = new JWK
+            t.manualLoadJwkAsync sampleKeySet
+            .then () ->
+                t.encryptAsync { kid: "testKey1" }, JSON.stringify payload
+                .then (rv) ->
+                    expect(rv).to.be.ok
+                    t.decryptAsync rv
+                .then (rv) ->
+                    expect(rv).to.be.ok
+                    expect(rv.key.kid).to.equal("testKey1")
+                    expect(rv.header.alg).to.equal("ECDH-ES")
+                    expect(rv.header.enc).to.equal("A128CBC-HS256")
+                    t2 = JSON.parse rv.plaintext.toString "utf8"
+                    expect(t2).to.deep.equal(payload)
+
+            .then () -> done()
+            .catch done
+
+        it "Should fail if no key is found", (done) ->
+            payload = test: "XYZZY"
+
+            t = new JWK
+            t.manualLoadJwkAsync sampleKeySet
+            .then () -> t.encryptAsync { kid: "testKey99999" }, JSON.stringify payload
+            .then () -> done new Error "Unexpected encryption success in failure unit test"
+            .catch (err) ->
+                if err.message == "No encryption key found" then done()
+                else done err
+
         it "Should throw error if key is not found", (done) ->
             payload = test: "XYZZY"
 
             k1 = null
             t = new JWK
-            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            t.manualLoadJwkAsync sampleKeySet
             .then () -> t.getKeyAsync kid: "testKey1"
             .then (key) ->
                 k1 = key
@@ -458,7 +520,7 @@ describe "JWK", () ->
             .then (rv) ->
                 t.removeKeyAsync k1
                 .then () -> t.decryptAsync rv
-            .then (rv) -> throw new Error "Unexpected decrption success in failure unit test"
+            .then (rv) -> throw new Error "Unexpected decryption success in failure unit test"
             .catch (err) ->
                 throw err if !err instanceof Error || err.message != "no key found"
                 done()
@@ -469,7 +531,7 @@ describe "JWK", () ->
 
             k1 = null
             t = new JWK
-            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            t.manualLoadJwkAsync sampleKeySet
             .then () -> t.getKeyAsync kid: "testKey1"
             .then (key) ->
                 k1 = key
@@ -478,7 +540,7 @@ describe "JWK", () ->
                 t.removeKeyAsync k1
                 .then () ->
                     t.doNotRefreshBefore = 0
-                    t.manualJwk = keys: [ k1 ]
+                    t.manualJwk = sampleKeySet
                     # This should now not find the key, refresh, and then find the key
                     t.decryptAsync rv
             .then (rv) -> done()
@@ -489,7 +551,7 @@ describe "JWK", () ->
 
             k1 = null
             t = new JWK doNotReloadOnMissingKey: true
-            t.generateKeyAsync "RSA", 1024, kid: "testKey1"
+            t.manualLoadJwkAsync sampleKeySet
             .then () -> t.getKeyAsync kid: "testKey1"
             .then (key) ->
                 k1 = key
@@ -498,7 +560,7 @@ describe "JWK", () ->
                 t.removeKeyAsync k1
                 .then () ->
                     t.doNotRefreshBefore = 0
-                    t.manualJwk = keys: [ k1 ]
+                    t.manualJwk = sampleKeySet
                     # This should now not find the key, refresh, and then find the key
                     t.decryptAsync rv
             .then (rv) -> throw new Error "Unexpected decrption success in failure unit test"

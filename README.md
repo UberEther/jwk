@@ -98,6 +98,8 @@ Returns a promise that resolve to a key from the keystore.  Arguments are as per
 
 If the key is not found, the keystore will refresh (unless doNotReloadOnMissingKey was specified).  If the key is still not found, undefined will be returned.
 
+If the first argument is a node-jose key object, then this will resolve to the key passed in.  This is mainly intended as a convience for methods that want to take either a key or a key search criteria/
+
 ### JWK.allKeysAsync()
 
 Returns a promise that resolve to an array of all matching keys from the keystore.  Arguments are as per [node-jose.get](https://github.com/cisco/node-jose#retrieving-keys).  If multiple keys match, then ALL keys is returned.
@@ -127,6 +129,7 @@ The result will contain:
 ### JWK.signAsync(key, content, options)
 Signs the specified content with the node-jose key specified.
 
+- key may be a node-jose key object or a query argument to node-jose.get to search the keystore for a key.
 - options.encoding is the encoding to encode the content with (if it is a string).  Defaults to "utf8".
 - options.format will be defaulted to "compact"
 - See [node-jose.JWS.createSign](https://github.com/cisco/node-jose#signing-content) for more details on other options.
@@ -148,6 +151,7 @@ The result will contain:
 ### JWK.encryptAsync(key, content, options)
 Encrypts the specified content with the node-jose key specified.
 
+- key may be a node-jose key object or a query argument to node-jose.get to search the keystore for a key.
 - options.encoding is the encoding to encode the content with (if it is a string).  Defaults to "utf8".
 - options.format will be defaulted to "compact"
 - See [node-jose.JWS.createEncrypt](https://github.com/cisco/node-jose#encrypting-content) for more details on other options.

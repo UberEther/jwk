@@ -1,6 +1,6 @@
 {
   "name": "uberether-jwk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Client library for managing JWK sets and alogrithms called against them",
   "main": "lib",
   "repository": {
@@ -24,7 +24,7 @@
   "dependencies": {
     "bluebird": "^2.9.13",
     "coffee-script": "^1.9.2",
-    "node-jose": "^0.3.0",
+    "node-jose": "^0.3.1",
     "auto-refresh-from-url": "^0.1.0"
   },
 
