@@ -2,7 +2,7 @@
 [![NPM Status](https://badge.fury.io/js/uberether-jwk.svg)](http://badge.fury.io/js/uberether-jwk)
 
 # TODO:
-( ) Integrate dynamic unit tests that use the [jose-cookbook](https://github.com/ietf-jose/cookbook) data - while many of these are really node-jose's responsibility, it would be good for us to verify and enforce in our tests.
+- [ ] Integrate dynamic unit tests that use the [jose-cookbook](https://github.com/ietf-jose/cookbook) data - while many of these are really node-jose's responsibility, it would be good for us to verify and enforce in our tests.
 
 # Overview
 
