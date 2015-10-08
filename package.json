@@ -1,6 +1,6 @@
 {
   "name": "uberether-jwk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Client library for managing JWK sets and alogrithms called against them",
   "main": "lib",
   "repository": {

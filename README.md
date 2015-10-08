@@ -8,7 +8,7 @@
 
 This library builds upon [node-jose](https://github.com/cisco/node-jose) and [auto-refresh-from-url](https://github.com/UberEther/auto-refresh-from-url) to allow for loading of JWK sets from a URL (with periodic or on-demand refresh) and performing JKA and JKS operations.
 
-All asynchronous methods return Bluebird promises.
+All asynchronous methods return Bluebird promises.  If you require callbacks, you can use the [Bluebird nodeify method](https://github.com/petkaantonov/bluebird/blob/master/API.md#nodeifyfunction-callback--object-options---promise).  For example: ```foo.somethingTharReturnsPromise().nodeify(callback);```
 
 Keys are reloaded from the URL as per auto-refresh-from-url settings (which can be passed through via the constructor).  Additionally, keys are (by default) refreshed if a key is not found or no valid key is found for a signature or encryption operation.  
 
@@ -66,6 +66,8 @@ Constructs a new JWK set manager.
 Options Available:
 - All options from the [auto-refresh-from-url constructor](https://github.com/UberEther/auto-refresh-from-url#autorefreshoptions)
 - doNotReloadOnMissingKey: Optional - if set to true, then the library will not try to refresh the JWK set when a key is not found
+- jwk: If no url was specified, then jwk will be loaded as the keystore upon the first request
+	- This is intended as a convience methods.  If you need to immediately validate jwk, construct without it and then use manualLoadJwkAsync and handle resolution or rejection of the promise
 
 
 ### JWK.manualLoadJwkAsync(jwk)

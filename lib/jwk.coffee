@@ -7,6 +7,9 @@ class JWK extends AutoRefresh
         super options
         @doNotReloadOnMissingKey = !!options.doNotReloadOnMissingKey
         @rememberedKeys = []
+        if !options.url && options.jwk
+            @useManualJwk = true
+            @manualJwk = options.jwk
 
     prepareRefreshRequest: () ->
         if @useManualJwk then return

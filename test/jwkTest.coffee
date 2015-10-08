@@ -98,6 +98,13 @@ describe "JWK", () ->
             .then () -> done()
             .catch done
 
+        it "Should manually load files via constructor", (done) ->
+            t = new JWK jwk: sampleKeySet
+            t.refreshIfNeededAsync()
+            .then (keystore) -> verifySampleKeySet keystore
+            .then () -> done()
+            .catch done
+
         it "Should wait for pending refreshes to complete", (done) ->
             t = new JWK
             t.manualLoadJwkAsync null
