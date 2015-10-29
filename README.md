@@ -32,7 +32,7 @@ jwk.verifySignatureAsync("SignedInputString")
 .catch(function(err) { err.stack || err.message || err });
 
 // Direct use of node-jose:
-jwk.refreshIfNeededAsync()
+jwk.loadAsync()
 .then(function(keystore) {
 	return JWK.jose.JWE.createDecrypt(keystore).verify("xxxxx", "utf8");
 });
@@ -48,7 +48,7 @@ jwk.verifySignatureAsync "SignedInputString"
 .catch (err) -> console.log err.stack || err.message || err
 
 # Direct use of node-jose:
-jwk.refreshIfNeededAsync()
+jwk.loadAsync()
 .then (keystore) -> return JWK.jose.JWE.createDecrypt(keystore).verify("xxxxx", "utf8");
 ```
 
@@ -58,27 +58,34 @@ jwk.refreshIfNeededAsync()
 
 A class that manages the key sets.  This is the main export for the library.
 
-### JWK.jose
+### JWKS.jose
 The instance of Jose used by JWK.  It defaults to the copy loaded by the library using ```require("node-jose")``` but can be modified or replaced by the caller.
 
-### new JWK(options)
+### new JWKS(options)
 
 Constructs a new JWK set manager.
 
 Options Available:
-- All options from the [auto-refresh-from-url constructor](https://github.com/UberEther/auto-refresh-from-url#autorefreshoptions)
 - doNotReloadOnMissingKey: Optional - if set to true, then the library will not try to refresh the JWK set when a key is not found
-- jwk: If no url was specified, then jwk will be loaded as the keystore upon the first request
-	- This is intended as a convience methods.  If you need to immediately validate jwk, construct without it and then use manualLoadJwkAsync and handle resolution or rejection of the promise
 
+- Loader options (in priority order)
+    - jwks: A static jwks JSON object to load the keys from
+    - loader: An auto-refresh-from-url compatible loader to load from
+    - url: URL to load keys from.  An auto-refresh-from-url CachedLoader wrapping a UrlLoader is constructed.  options.loaderOptions are passed on to both loader's constructors.  The following loader options are defaulted if not specifed:
+    	- requestDefaults
+    		- json: defaults to ```true``` if not specified.  If set false, you must provide a processor to transform the data into an object.
+    		- method: defaults to ```"GET"```
+    		- headers:
+    			- accept: defaults to: ```"application/jwk-set+json, application/json, text/plain"```
+    - file: A file to load keys from.  An auto-refresh-from-url FileLoader is constructed for this file.  options.loaderOptions is passed into the constructor.
 
-### JWK.manualLoadJwkAsync(jwk)
+### JWK.loadAsync(check)
+Loads the jose JWKS object.  Check is passed onto the underlying loader to indicate if the source should be activly checked for updates.
 
-When called, the keystore is replaced with the one specified by this JWK set.  Any remembered keys are added.
+### JWK.reset(forgetKeys)
+Removes any cached data.  If forgetKeys is true, then remembered keys are all forgotten.
 
-If jwk is null, then the keyset is cleared and reloaded from the specified URL.
-
-Returns a promise that resolves to the new keystore once everything is loaded.
+If a load is already in progress, the result of the load will be retained.
 
 ### JWK.addKeyAsync(key, remember = true)
 
