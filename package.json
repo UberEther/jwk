@@ -22,17 +22,17 @@
     "test-cov": "istanbul cover --config test/istanbul.yml node_modules/mocha/bin/_mocha"
   },
   "dependencies": {
-    "bluebird": "^2.9.13",
+    "bluebird": "^3.0.0",
     "coffee-script": "^1.9.2",
-    "node-jose": "^0.3.1",
-    "auto-refresh-from-url": "^0.1.0"
+    "node-jose": "^0.4.0",
+    "auto-refresh-from-url": "^0.2.0"
   },
 
   "devDependencies": {
     "mocha": "^2.3.0",
     "chai": "^3.2.0",
     "rewire": "^2.3.4",
-    "istanbul": "^0.3.5",
+    "istanbul": "^0.4.0",
     "coffee-coverage": "^0.6.3"
   }
 }

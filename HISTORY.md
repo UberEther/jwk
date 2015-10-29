@@ -1,3 +1,12 @@
+0.4.0: Published 10/29/2015
+- Update auto-refresh-from-url, bluebird, node-jose, and istanpul
+- Rename refreshIfNeeded API to loadAsync to follow new auto-refresh-from-url convention
+- Renamed jwk option to jwks
+- Added loader and file options
+- Added JWK.Loader to expose auto-refresh-from-url
+- Rename JWK class to JWKS to be more accurate
+- Split crypto op tests away from core JWKS testing to make tests easier to read
+
 0.3.0: Published 10/8/2015
 - Added jwk constructor option
 

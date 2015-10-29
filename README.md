@@ -3,6 +3,8 @@
 
 # TODO:
 - [ ] Integrate dynamic unit tests that use the [jose-cookbook](https://github.com/ietf-jose/cookbook) data - while many of these are really node-jose's responsibility, it would be good for us to verify and enforce in our tests.
+- [ ] Consider renaming package to uberether-jwks since it manages key sets and not individual keys
+- [ ] Unit-test cleanup after migration to new loaders
 
 # Overview
 

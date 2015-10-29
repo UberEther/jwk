@@ -1,60 +1,60 @@
 Promise = require "bluebird"
-AutoRefresh = require "auto-refresh-from-url"
+util = require "util"
+_Loaders = require "auto-refresh-from-url"
 _jose = require "node-jose"
 
-class JWK extends AutoRefresh
+class JWKS
     constructor: (options = {}) ->
-        super options
+        switch
+            when options.jwks then @loader = new JWKS.Loaders.StaticLoader options.jwks
+            when options.loader then @loader = options.loader
+            when options.url
+                urlOpts = util._extend {}, options.loaderOptions
+                urlOpts.requestDefaults ||= {}
+                if !urlOpts.requestDefaults.json? then urlOpts.requestDefaults.json = true
+                urlOpts.requestDefaults.method ||= "GET"
+                urlOpts.requestDefaults.headers ||= {}
+                urlOpts.requestDefaults.headers.accept ||= "application/jwk-set+json, application/json, text/plain"
+                t = new JWKS.Loaders.UrlLoader options.url, urlOpts
+                @loader = new JWKS.Loaders.CachedLoader t, options.loaderOptions
+            when options.file then @loader = new JWKS.Loaders.FileLoader options.file, options.loaderOptions
+            else @loader = new JWKS.Loaders.StaticLoader keys: []
+
         @doNotReloadOnMissingKey = !!options.doNotReloadOnMissingKey
         @rememberedKeys = []
-        if !options.url && options.jwk
-            @useManualJwk = true
-            @manualJwk = options.jwk
 
-    prepareRefreshRequest: () ->
-        if @useManualJwk then return
-        super
-
-    processUrlData: (res, raw, oldPayload) -> # May return value or promise
-        # Use super implementation to validate status codes
-        raw = super
-
-        if !raw
-            if @manualJwk
-                raw = @manualJwk
-                @manualJwk = null
-            else return oldPayload || JWK.jose.JWK.createKeyStore()
-
+    loadAsync: (check) ->
         Promise.bind @
-        .then () -> JWK.jose.JWK.asKeyStore raw
-        .then (newKeystore) ->
-            Promise.bind @, @rememberedKeys
-            .map (key) -> newKeystore.add key
-            .return newKeystore
+        .then () -> @loader.loadAsync check
+        .then (rv) ->
+            return if @jwks && !rv.loaded # Use cached value if we did not load
+            Promise.bind @
+            .then () -> JWKS.jose.JWK.asKeyStore rv.value
+            .then (jwks) ->
+                Promise.bind @, @rememberedKeys
+                .map (key) -> jwks.add key
+                .then () -> @jwks = jwks # Do not store till the very end...
+        .then () -> return @jwks
 
-    manualLoadJwkAsync: (jwk) ->
-        @useManualJwk = !!jwk
-        @manualJwk = jwk
-
-        # Force an immediate reload - if a refresh is in progress then we must wait for it
-        if @refreshPromise then return @refreshPromise.then () -> @refreshNowAsync true
-        else return @refreshNowAsync true
+    reset: (clearRememberedKeys) ->
+        @jwks = null
+        if clearRememberedKeys then @rememberedKeys = []
 
     addKeyAsync: (key, remember = true) ->
-        @refreshIfNeededAsync()
+        @loadAsync()
         .then (keystore) -> keystore.add key
         .then (key) ->
             if remember then @rememberedKeys.push key
             return key
 
     removeKeyAsync: (oldKey) ->
-        @refreshIfNeededAsync()
+        @loadAsync()
         .then (keystore) ->
             @rememberedKeys = @rememberedKeys.filter (x) -> return x != oldKey
             keystore.remove oldKey
 
     replaceKeyAsync: (oldKey, newKey) ->
-        @refreshIfNeededAsync()
+        @loadAsync()
         .then (keystore) ->
             Promise.bind @
             .then () -> keystore.add newKey
@@ -68,11 +68,11 @@ class JWK extends AutoRefresh
     getKeyAsync: () -> # Arguments follow node-jose.get() - https://github.com/cisco/node-jose#retrieving-keys
         searchArgs = arguments
 
-        @refreshIfNeededAsync()
+        @loadAsync()
         .then (keystore) ->
             # If you pass a key in, just return a promise for that key
             # But do after the refresh - the caller might be relying on that...
-            if searchArgs.length == 1 && JWK.jose.JWK.isKey searchArgs[0]
+            if searchArgs.length == 1 && JWKS.jose.JWK.isKey searchArgs[0]
                 return searchArgs[0]
 
             # Lookup and return the key
@@ -80,53 +80,53 @@ class JWK extends AutoRefresh
             return rv if rv || @doNotReloadOnMissingKey
 
             # Not found?  Force an immediate refresh
-            return Promise.bind @
-            .then @refreshNowAsync
+            return Promise.bind @, true
+            .then @loadAsync
             .then (newKeystore) ->
                 return rv if newKeystore == keystore
                 newKeystore.get.apply newKeystore, searchArgs
 
     allKeysAsync: () -> # Arguments follow node-jose.get() - https://github.com/cisco/node-jose#retrieving-keys
         searchArgs = arguments
-        @refreshIfNeededAsync()
+        @loadAsync()
         .then (keystore) ->
             # Lookup and return the key
             rv = keystore.all.apply keystore, searchArgs
             return rv if rv.length || @doNotReloadOnMissingKey
 
             # Not found?  Force an immediate refresh
-            return Promise.bind @
-            .then @refreshNowAsync
+            return Promise.bind @, true
+            .then @loadAsync
             .then (newKeystore) ->
                 return rv if newKeystore == keystore
                 newKeystore.all.apply newKeystore, searchArgs
 
     toJsonAsync: (exportPrivate) ->
         callArgs = arguments
-        @refreshIfNeededAsync()
+        @loadAsync()
         .then (keystore) -> keystore.toJSON exportPrivate
 
     generateKeyAsync: (kty, size, props, remember = true) ->
-        @refreshIfNeededAsync()
+        @loadAsync()
         .then (keystore) -> keystore.generate kty, size, props
         .then (key) ->
             if remember then @rememberedKeys.push key
             return key
 
     verifySignatureAsync: (input, encoding) -> # https://github.com/cisco/node-jose#verifying-a-jws
-        @refreshIfNeededAsync()
+        @loadAsync()
         .then (keystore) ->
             Promise.bind @
             .then () ->
-                JWK.jose.JWS.createVerify keystore
+                JWKS.jose.JWS.createVerify keystore
                 .verify input
             .catch (err) ->
                 throw err if err.message != "no key found" || @doNotReloadOnMissingKey
                 # Library rejects with "key does not match" if the key is not found...
-                @refreshNowAsync()
+                @loadAsync true
                 .then (newKeystore) ->
                     if newKeystore == keystore then throw err
-                    JWK.jose.JWS.createVerify newKeystore
+                    JWKS.jose.JWS.createVerify newKeystore
                     .verify input
 
     signAsync: (key, content, options = {}) -> # https://github.com/cisco/node-jose#signing-content
@@ -135,11 +135,9 @@ class JWK extends AutoRefresh
         @getKeyAsync key
         .then (key) ->
             if !key then throw new Error "No signing key found"
-            JWK.jose.JWS.createSign options, key
+            JWKS.jose.JWS.createSign options, key
             .update content, options.encoding
             .final()
-
-        # todo: Detect signature failure, reload keys, and retry
 
     encryptAsync: (key, content, options = {}) -> # https://github.com/cisco/node-jose#encrypting-content
         options.encoding ||= "utf8"
@@ -147,26 +145,27 @@ class JWK extends AutoRefresh
         @getKeyAsync key
         .then (key) ->
             if !key then throw new Error "No encryption key found"
-            JWK.jose.JWE.createEncrypt options, key
+            JWKS.jose.JWE.createEncrypt options, key
             .update content, options.encoding
             .final()
 
     decryptAsync: (input) -> # https://github.com/cisco/node-jose#decrypting-a-jwe
-        @refreshIfNeededAsync()
+        @loadAsync()
         .then (keystore) ->
             Promise.bind @
             .then () ->
-                JWK.jose.JWE.createDecrypt keystore
+                JWKS.jose.JWE.createDecrypt keystore
                 .decrypt input
             .catch (err) ->
                 throw err if err.message != "no key found" || @doNotReloadOnMissingKey
                 # Library rejects with undefined if the key is not found...
-                @refreshNowAsync()
+                @loadAsync true
                 .then (newKeystore) ->
                     if newKeystore == keystore then throw err
-                    JWK.jose.JWE.createDecrypt newKeystore
+                    JWKS.jose.JWE.createDecrypt newKeystore
                     .decrypt input
 
-JWK.jose = _jose
+JWKS.jose = _jose
+JWKS.Loaders = _Loaders
 
-module.exports = JWK
+module.exports = JWKS
