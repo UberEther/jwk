@@ -25,7 +25,7 @@ Lastly, the library supports manually loading data instead of fetching it from a
 
 ```js
 var JWK = require("uberether-jwk");
-var jwk = new JWK({ urk: "http://jwk.example.com/foo" });
+var jwk = new JWK({ url: "http://jwk.example.com/foo" });
 
 jwk.verifySignatureAsync("SignedInputString")
 .then(function() { doStuffHere() })
